@@ -77,6 +77,25 @@
             parent.appendChild(document.createElement('h3')).textContent = 'サブスクライブしたユーザー一覧';
             parent.appendChild(subTable);
 
+            // その他のギフトテーブル
+            const otherGiftTableId = `other-gift-table-${liveId}`;
+            const otherGiftTable = document.createElement('table');
+            otherGiftTable.className = 'display';
+            otherGiftTable.id = otherGiftTableId;
+            otherGiftTable.innerHTML = `<thead><tr>
+                    <th>No. ${getCopyIcon(otherGiftTableId, 0)}</th>
+                    <th>ユーザー名 ${getCopyIcon(otherGiftTableId, 1)}</th>
+                    <th>コメント ${getCopyIcon(otherGiftTableId, 2)}</th>
+                </tr></thead><tbody></tbody>`;
+            let otherNo = 1;
+            Object.entries(group.otherGiftUsers).forEach(([name, comment]) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${otherNo++}</td><td>${name}</td><td>${comment}</td>`;
+                otherGiftTable.querySelector('tbody').appendChild(tr);
+            });
+            parent.appendChild(document.createElement('h3')).textContent = 'その他のギフト';
+            parent.appendChild(otherGiftTable);
+
             // DataTables初期化
             setTimeout(() => {
                 if ($(`#${bitsTableId}`).length) {
@@ -84,6 +103,9 @@
                 }
                 if ($(`#${subTableId}`).length) {
                     $(`#${subTableId}`).DataTable();
+                }
+                if ($(`#${otherGiftTableId}`).length) {
+                    $(`#${otherGiftTableId}`).DataTable();
                 }
             }, 0);
         }
@@ -102,7 +124,7 @@
                 data.forEach(e => {
                     const liveId = e.data.liveId || '不明なライブ';
                     if (!liveGroups[liveId]) {
-                        liveGroups[liveId] = { bitsUsers: {}, subUsers: new Map(), liveName: e.name || '' };
+                        liveGroups[liveId] = { bitsUsers: {}, subUsers: new Map(), otherGiftUsers: {}, liveName: e.name || '' };
                     }
                     // ビッツ集計
                     if (e.data.hasGift === true && e.data.price) {
@@ -114,7 +136,7 @@
                         liveGroups[liveId].bitsUsers[name] += price;
                     }
                     // サブスク集計
-                    if (e.data.hasGift === true && typeof e.data.price === "undefined") {
+                    if (e.data.hasGift === true && typeof e.data.price === "undefined" && e.data.comment && /subscribed at/i.test(e.data.comment)) {
                         const name = e.data.displayName;
                         let month = '';
                         let tier = '';
@@ -131,6 +153,16 @@
                             }
                         }
                         liveGroups[liveId].subUsers.set(name, { tier, month });
+                    }
+                    // その他のギフト集計
+                    if (e.data.hasGift === true && typeof e.data.price === "undefined" && (!e.data.comment || !/subscribed at/i.test(e.data.comment))) {
+                        const name = e.data.displayName;
+                        const comment = e.data.comment || '';
+                        if (!liveGroups[liveId].otherGiftUsers[name]) {
+                            liveGroups[liveId].otherGiftUsers[name] = comment;
+                        } else {
+                            liveGroups[liveId].otherGiftUsers[name] += '<br>' + comment;
+                        }
                     }
                 });
 
