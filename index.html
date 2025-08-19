@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneComme Twitch</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+</head>
+
+<body>
+    <h1>Twitch Bits/Subscribe Extractor from OneComme</h1>
+    <div id="lists"></div>
+    <script>
+        // クリップボードに列をコピーする関数
+        function copyColumnToClipboard(tableId, colIndex, event) {
+            if (event) event.stopPropagation();
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+            const values = rows.map(row => row.children[colIndex].textContent);
+            const text = values.join('\n');
+            navigator.clipboard.writeText(text);
+            alert('クリップボードにコピーしました');
+        }
+
+        // 列のコピーアイコンを生成する関数
+        function getCopyIcon(tableId, colIndex) {
+            return `<button onclick=\"copyColumnToClipboard('${tableId}',${colIndex},event)\" style=\"background:none;border:none;padding:0;cursor:pointer;\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><path d=\"M10 1.5A1.5 1.5 0 0 1 11.5 3v1h-1V3a.5.5 0 0 0-.5-.5H4A.5.5 0 0 0 3.5 3v10a.5.5 0 0 0 .5.5h6a.5.5 0 0 0 .5-.5v-1h1v1A1.5 1.5 0 0 1 10 14.5H4A1.5 1.5 0 0 1 2.5 13V3A1.5 1.5 0 0 1 4 1.5h6z\"/><path d=\"M13.5 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-7a.5.5 0 0 1 .5-.5h7zm-7-1A1.5 1.5 0 0 0 5 5.5v7A1.5 1.5 0 0 0 6.5 14h7A1.5 1.5 0 0 0 15 12.5v-7A1.5 1.5 0 0 0 13.5 4h-7z\"/></svg></button>`;
+        }
+
+        // ライブIDごとにテーブルを生成する関数
+        function renderLiveTables(liveId, group, parent) {
+            // ライブ名のみ表示
+            const h2 = document.createElement('h2');
+            h2.textContent = group.liveName || '';
+            parent.appendChild(h2);
+
+            const bitsTableId = `bits-table-${liveId}`;
+            // ビッツテーブル
+            const bitsTable = document.createElement('table');
+            bitsTable.className = 'display';
+            bitsTable.id = bitsTableId;
+            bitsTable.innerHTML = `<thead><tr>
+            <th>No. ${getCopyIcon(bitsTableId, 0)}</th>
+            <th>ユーザー名 ${getCopyIcon(bitsTableId, 1)}</th>
+            <th>合計ビッツ ${getCopyIcon(bitsTableId, 2)}</th>
+        </tr></thead><tbody></tbody>`;
+            let bitsNo = 1;
+            Object.entries(group.bitsUsers).forEach(([name, totalPrice]) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${bitsNo++}</td><td>${name}</td><td>${totalPrice}</td>`;
+                bitsTable.querySelector('tbody').appendChild(tr);
+            });
+            parent.appendChild(document.createElement('h3')).textContent = 'ビッツしたユーザー一覧';
+            parent.appendChild(bitsTable);
+
+            const subTableId = `sub-table-${liveId}`;
+            // サブスクテーブル
+            const subTable = document.createElement('table');
+            subTable.className = 'display';
+            subTable.id = subTableId;
+            subTable.innerHTML = `<thead><tr>
+            <th>No. ${getCopyIcon(subTableId, 0)}</th>
+            <th>ユーザー名 ${getCopyIcon(subTableId, 1)}</th>
+            <th>ティア ${getCopyIcon(subTableId, 2)}</th>
+            <th>サブスクライブ月 ${getCopyIcon(subTableId, 3)}</th>
+        </tr></thead><tbody></tbody>`;
+            let subNo = 1;
+            group.subUsers.forEach((subInfo, name) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${subNo++}</td><td>${name}</td><td>${subInfo.tier}</td><td>${subInfo.month}</td>`;
+                subTable.querySelector('tbody').appendChild(tr);
+            });
+            parent.appendChild(document.createElement('h3')).textContent = 'サブスクライブしたユーザー一覧';
+            parent.appendChild(subTable);
+
+            // DataTables初期化
+            setTimeout(() => {
+                if ($(`#${bitsTableId}`).length) {
+                    $(`#${bitsTableId}`).DataTable();
+                }
+                if ($(`#${subTableId}`).length) {
+                    $(`#${subTableId}`).DataTable();
+                }
+            }, 0);
+        }
+
+        // わんコメAPIからデータを取得して表示する関数
+        async function fetchWankomeData() {
+            // わんコメHTTP APIのエンドポイント
+            const apiUrl = 'http://localhost:11180/api/comments';
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                console.log('API取得成功', data);
+
+                // liveIdごとにデータをグループ化
+                const liveGroups = {};
+                data.forEach(e => {
+                    const liveId = e.data.liveId || '不明なライブ';
+                    if (!liveGroups[liveId]) {
+                        liveGroups[liveId] = { bitsUsers: {}, subUsers: new Map(), liveName: e.name || '' };
+                    }
+                    // ビッツ集計
+                    if (e.data.hasGift === true && e.data.price) {
+                        const name = e.data.displayName;
+                        const price = e.data.price || 0;
+                        if (!liveGroups[liveId].bitsUsers[name]) {
+                            liveGroups[liveId].bitsUsers[name] = 0;
+                        }
+                        liveGroups[liveId].bitsUsers[name] += price;
+                    }
+                    // サブスク集計
+                    if (e.data.hasGift === true && typeof e.data.price === "undefined") {
+                        const name = e.data.displayName;
+                        let month = '';
+                        let tier = '';
+                        if (e.data.comment) {
+                            // コメントからティアを抽出
+                            const tierMatch = e.data.comment.match(/subscribed at (Tier \d+)/i);
+                            if (tierMatch) {
+                                tier = tierMatch[1];
+                            }
+                            // コメントから月数を抽出
+                            const monthMatch = e.data.comment.match(/They've subscribed for (\d+\s*\w+)/i);
+                            if (monthMatch) {
+                                month = monthMatch[1];
+                            }
+                        }
+                        liveGroups[liveId].subUsers.set(name, { tier, month });
+                    }
+                });
+
+                // HTMLに表示
+                const listsDiv = document.getElementById('lists');
+                listsDiv.innerHTML = '';
+                Object.entries(liveGroups).forEach(([liveId, group]) => {
+                    renderLiveTables(liveId, group, listsDiv);
+                });
+            } catch (err) {
+                console.error('API取得エラー', err);
+            }
+        }
+        fetchWankomeData();
+    </script>
+</body>
+
+</html>
