@@ -44,11 +44,11 @@
             bitsTable.className = 'display';
             bitsTable.id = bitsTableId;
             bitsTable.innerHTML = `<thead><tr>
-            <th style="width:60px;">No. ${getCopyIcon(bitsTableId, 0)}</th>
-            <th>ユーザー名 ${getCopyIcon(bitsTableId, 1)}</th>
-            <th>ユーザーID ${getCopyIcon(bitsTableId, 2)}</th>
-            <th>合計ビッツ ${getCopyIcon(bitsTableId, 3)}</th>
-        </tr></thead><tbody></tbody>`;
+                <th style="width:60px;">No. ${getCopyIcon(bitsTableId, 0)}</th>
+                <th>ユーザー名 ${getCopyIcon(bitsTableId, 1)}</th>
+                <th>ユーザーID ${getCopyIcon(bitsTableId, 2)}</th>
+                <th>合計ビッツ ${getCopyIcon(bitsTableId, 3)}</th>
+                </tr></thead><tbody></tbody>`;
             let bitsNo = 1;
             Object.entries(group.bitsUsers).forEach(([userKey, info]) => {
                 const tr = document.createElement('tr');
@@ -64,12 +64,12 @@
             subTable.className = 'display';
             subTable.id = subTableId;
             subTable.innerHTML = `<thead><tr>
-            <th style="width:60px;">No. ${getCopyIcon(subTableId, 0)}</th>
-            <th>ユーザー名 ${getCopyIcon(subTableId, 1)}</th>
-            <th>ユーザーID ${getCopyIcon(subTableId, 2)}</th>
-            <th>ティア ${getCopyIcon(subTableId, 3)}</th>
-            <th>サブスクライブ月 ${getCopyIcon(subTableId, 4)}</th>
-        </tr></thead><tbody></tbody>`;
+                <th style="width:60px;">No. ${getCopyIcon(subTableId, 0)}</th>
+                <th>ユーザー名 ${getCopyIcon(subTableId, 1)}</th>
+                <th>ユーザーID ${getCopyIcon(subTableId, 2)}</th>
+                <th>ティア ${getCopyIcon(subTableId, 3)}</th>
+                <th>サブスクライブ月 ${getCopyIcon(subTableId, 4)}</th>
+                </tr></thead><tbody></tbody>`;
             let subNo = 1;
             group.subUsers.forEach((subInfo, userKey) => {
                 const tr = document.createElement('tr');
@@ -85,10 +85,10 @@
             otherGiftTable.className = 'display';
             otherGiftTable.id = otherGiftTableId;
             otherGiftTable.innerHTML = `<thead><tr>
-                    <th style="width:60px;">No. ${getCopyIcon(otherGiftTableId, 0)}</th>
-                    <th>ユーザー名 ${getCopyIcon(otherGiftTableId, 1)}</th>
-                    <th>ユーザーID ${getCopyIcon(otherGiftTableId, 2)}</th>
-                    <th>コメント ${getCopyIcon(otherGiftTableId, 3)}</th>
+                <th style="width:60px;">No. ${getCopyIcon(otherGiftTableId, 0)}</th>
+                <th>ユーザー名 ${getCopyIcon(otherGiftTableId, 1)}</th>
+                <th>ユーザーID ${getCopyIcon(otherGiftTableId, 2)}</th>
+                <th>コメント ${getCopyIcon(otherGiftTableId, 3)}</th>
                 </tr></thead><tbody></tbody>`;
             let otherNo = 1;
             Object.entries(group.otherGiftUsers).forEach(([userKey, info]) => {
