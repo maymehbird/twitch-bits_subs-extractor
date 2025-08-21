@@ -129,47 +129,53 @@
                     if (!liveGroups[liveId]) {
                         liveGroups[liveId] = { bitsUsers: {}, subUsers: new Map(), otherGiftUsers: {}, liveName: e.name || '' };
                     }
-                    const screenName = e.data.screenName || '';
-                    const displayName = e.data.displayName || '';
-                    const userKey = e.data.userId || '';
-                    // ビッツ集計
-                    if (e.data.hasGift === true && e.data.price) {
-                        const price = e.data.price || 0;
-                        if (!liveGroups[liveId].bitsUsers[userKey]) {
-                            liveGroups[liveId].bitsUsers[userKey] = { displayName, screenName, totalPrice: 0 };
-                        }
-                        liveGroups[liveId].bitsUsers[userKey].totalPrice += price;
-                        liveGroups[liveId].bitsUsers[userKey].displayName = displayName;
-                        liveGroups[liveId].bitsUsers[userKey].screenName = screenName;
-                    }
-                    // サブスク集計
-                    if (e.data.hasGift === true && typeof e.data.price === "undefined" && e.data.comment && /subscribed at/i.test(e.data.comment)) {
-                        let month = '';
-                        let tier = '';
-                        if (e.data.comment) {
-                            // コメントからティアを抽出
-                            const tierMatch = e.data.comment.match(/subscribed at (Tier \d+)/i);
-                            if (tierMatch) {
-                                tier = tierMatch[1];
+                    const live = liveGroups[liveId];
+                    if (e.data.hasGift === true) {
+                        const screenName = e.data.screenName || '';
+                        const displayName = e.data.displayName || '';
+                        const userKey = e.data.userId || '';
+                        // ビッツ集計
+                        if (e.data.price) {
+                            const price = e.data.price || 0;
+                            if (!live.bitsUsers[userKey]) {
+                                live.bitsUsers[userKey] = { displayName, screenName, totalPrice: 0 };
                             }
-                            // コメントから月数を抽出
-                            const monthMatch = e.data.comment.match(/They've subscribed for (\d+\s*\w+)/i);
-                            if (monthMatch) {
-                                month = monthMatch[1];
+                            live.bitsUsers[userKey].totalPrice += price;
+                            live.bitsUsers[userKey].displayName = displayName;
+                            live.bitsUsers[userKey].screenName = screenName;
+                        }
+                        // price未定義の場合
+                        else if (typeof e.data.price === "undefined") {
+                            // サブスク集計
+                            if (e.data.comment && /subscribed at/i.test(e.data.comment)) {
+                                let month = '';
+                                let tier = '';
+                                if (e.data.comment) {
+                                    // コメントからティアを抽出
+                                    const tierMatch = e.data.comment.match(/subscribed at (Tier \d+)/i);
+                                    if (tierMatch) {
+                                        tier = tierMatch[1];
+                                    }
+                                    // コメントから月数を抽出
+                                    const monthMatch = e.data.comment.match(/They've subscribed for (\d+\s*\w+)/i);
+                                    if (monthMatch) {
+                                        month = monthMatch[1];
+                                    }
+                                }
+                                live.subUsers.set(userKey, { displayName, screenName, tier, month });
+                            }
+                            // その他のギフト集計
+                            else {
+                                const comment = e.data.comment || '';
+                                if (!live.otherGiftUsers[userKey]) {
+                                    live.otherGiftUsers[userKey] = { displayName, screenName, comment };
+                                } else {
+                                    live.otherGiftUsers[userKey].comment += '<br>' + comment;
+                                }
+                                live.otherGiftUsers[userKey].displayName = displayName;
+                                live.otherGiftUsers[userKey].screenName = screenName;
                             }
                         }
-                        liveGroups[liveId].subUsers.set(userKey, { displayName, screenName, tier, month });
-                    }
-                    // その他のギフト集計
-                    if (e.data.hasGift === true && typeof e.data.price === "undefined" && (!e.data.comment || !/subscribed at/i.test(e.data.comment))) {
-                        const comment = e.data.comment || '';
-                        if (!liveGroups[liveId].otherGiftUsers[userKey]) {
-                            liveGroups[liveId].otherGiftUsers[userKey] = { displayName, screenName, comment };
-                        } else {
-                            liveGroups[liveId].otherGiftUsers[userKey].comment += '<br>' + comment;
-                        }
-                        liveGroups[liveId].otherGiftUsers[userKey].displayName = displayName;
-                        liveGroups[liveId].otherGiftUsers[userKey].screenName = screenName;
                     }
                 });
 
