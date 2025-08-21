@@ -31,90 +31,89 @@
             return `<button onclick=\"copyColumnToClipboard('${tableId}',${colIndex},event)\" style=\"background:none;border:none;padding:0;cursor:pointer;\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><path d=\"M10 1.5A1.5 1.5 0 0 1 11.5 3v1h-1V3a.5.5 0 0 0-.5-.5H4A.5.5 0 0 0 3.5 3v10a.5.5 0 0 0 .5.5h6a.5.5 0 0 0 .5-.5v-1h1v1A1.5 1.5 0 0 1 10 14.5H4A1.5 1.5 0 0 1 2.5 13V3A1.5 1.5 0 0 1 4 1.5h6z\"/><path d=\"M13.5 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-7a.5.5 0 0 1 .5-.5h7zm-7-1A1.5 1.5 0 0 0 5 5.5v7A1.5 1.5 0 0 0 6.5 14h7A1.5 1.5 0 0 0 15 12.5v-7A1.5 1.5 0 0 0 13.5 4h-7z\"/></svg></button>`;
         }
 
+        // 共通: ユーザー行生成関数
+        function renderUserRows(tbody, users, extraColumns = []) {
+            let no = 1;
+            Object.entries(users).forEach(([userKey, info]) => {
+                let row = `<td>${no++}</td><td>${info.displayName}</td><td>${info.screenName}</td>`;
+                extraColumns.forEach(col => {
+                    row += `<td>${info[col] ?? ''}</td>`;
+                });
+                const tr = document.createElement('tr');
+                tr.innerHTML = row;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 共通: テーブルヘッダー生成関数
+        function renderTableHeader(tableId, columns) {
+            return `<thead><tr>${columns.map((col, i) => `<th${col.width ? ` style=\"width:${col.width}\"` : ''}>${col.label} ${getCopyIcon(tableId, i)}</th>`).join('')}</tr></thead><tbody></tbody>`;
+        }
+
         // ライブIDごとにテーブルを生成する関数
-        function renderLiveTables(liveId, group, parent) {
+        function renderLiveTables(liveId, live, parent) {
             // ライブ名のみ表示
             const h2 = document.createElement('h2');
-            h2.textContent = group.liveName || '';
+            h2.textContent = live.liveName || '';
             parent.appendChild(h2);
 
             const bitsTableId = `bits-table-${liveId}`;
-            // ビッツテーブル
             const bitsTable = document.createElement('table');
             bitsTable.className = 'display';
             bitsTable.id = bitsTableId;
-            bitsTable.innerHTML = `<thead><tr>
-                <th style="width:60px;">No. ${getCopyIcon(bitsTableId, 0)}</th>
-                <th>ユーザー名 ${getCopyIcon(bitsTableId, 1)}</th>
-                <th>ユーザーID ${getCopyIcon(bitsTableId, 2)}</th>
-                <th>合計ビッツ ${getCopyIcon(bitsTableId, 3)}</th>
-                </tr></thead><tbody></tbody>`;
-            let bitsNo = 1;
-            Object.entries(group.bitsUsers).forEach(([userKey, info]) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${bitsNo++}</td><td>${info.displayName}</td><td>${info.screenName}</td><td>${info.totalPrice}</td>`;
-                bitsTable.querySelector('tbody').appendChild(tr);
-            });
+            bitsTable.innerHTML = renderTableHeader(bitsTableId, [
+                { label: 'No.', width: '60px' },
+                { label: 'ユーザー名' },
+                { label: 'ユーザーID' },
+                { label: '合計ビッツ' }
+            ]);
+            let bitsTbody = bitsTable.querySelector('tbody');
+            renderUserRows(bitsTbody, live.bitsUsers, ['totalPrice']);
             parent.appendChild(document.createElement('h3')).textContent = 'ビッツしたユーザー一覧';
             parent.appendChild(bitsTable);
 
             const subTableId = `sub-table-${liveId}`;
-            // サブスクテーブル
             const subTable = document.createElement('table');
             subTable.className = 'display';
             subTable.id = subTableId;
-            subTable.innerHTML = `<thead><tr>
-                <th style="width:60px;">No. ${getCopyIcon(subTableId, 0)}</th>
-                <th>ユーザー名 ${getCopyIcon(subTableId, 1)}</th>
-                <th>ユーザーID ${getCopyIcon(subTableId, 2)}</th>
-                <th>ティア ${getCopyIcon(subTableId, 3)}</th>
-                <th>サブスクライブ月 ${getCopyIcon(subTableId, 4)}</th>
-                </tr></thead><tbody></tbody>`;
-            let subNo = 1;
-            group.subUsers.forEach((subInfo, userKey) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${subNo++}</td><td>${subInfo.displayName}</td><td>${subInfo.screenName}</td><td>${subInfo.tier}</td><td>${subInfo.month}</td>`;
-                subTable.querySelector('tbody').appendChild(tr);
-            });
+            subTable.innerHTML = renderTableHeader(subTableId, [
+                { label: 'No.', width: '60px' },
+                { label: 'ユーザー名' },
+                { label: 'ユーザーID' },
+                { label: 'ティア' },
+                { label: 'サブスクライブ月' }
+            ]);
+            let subTbody = subTable.querySelector('tbody');
+            renderUserRows(subTbody, live.subUsers, ['tier', 'month']);
             parent.appendChild(document.createElement('h3')).textContent = 'サブスクライブしたユーザー一覧';
             parent.appendChild(subTable);
 
-            // その他のギフトテーブル
             const otherGiftTableId = `other-gift-table-${liveId}`;
             const otherGiftTable = document.createElement('table');
             otherGiftTable.className = 'display';
             otherGiftTable.id = otherGiftTableId;
-            otherGiftTable.innerHTML = `<thead><tr>
-                <th style="width:60px;">No. ${getCopyIcon(otherGiftTableId, 0)}</th>
-                <th>ユーザー名 ${getCopyIcon(otherGiftTableId, 1)}</th>
-                <th>ユーザーID ${getCopyIcon(otherGiftTableId, 2)}</th>
-                <th>コメント ${getCopyIcon(otherGiftTableId, 3)}</th>
-                </tr></thead><tbody></tbody>`;
-            let otherNo = 1;
-            Object.entries(group.otherGiftUsers).forEach(([userKey, info]) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${otherNo++}</td><td>${info.displayName}</td><td>${info.screenName}</td><td>${info.comment}</td>`;
-                otherGiftTable.querySelector('tbody').appendChild(tr);
-            });
+            otherGiftTable.innerHTML = renderTableHeader(otherGiftTableId, [
+                { label: 'No.', width: '60px' },
+                { label: 'ユーザー名' },
+                { label: 'ユーザーID' },
+                { label: 'コメント' }
+            ]);
+            let otherTbody = otherGiftTable.querySelector('tbody');
+            renderUserRows(otherTbody, live.otherGiftUsers, ['comment']);
             parent.appendChild(document.createElement('h3')).textContent = 'その他のギフト';
             parent.appendChild(otherGiftTable);
 
-            // コメントしたユーザー一覧テーブル
             const commentTableId = `comment-table-${liveId}`;
             const commentTable = document.createElement('table');
             commentTable.className = 'display';
             commentTable.id = commentTableId;
-            commentTable.innerHTML = `<thead><tr>
-                <th style="width:60px;">No. ${getCopyIcon(commentTableId, 0)}</th>
-                <th>ユーザー名 ${getCopyIcon(commentTableId, 1)}</th>
-                <th>ユーザーID ${getCopyIcon(commentTableId, 2)}</th>
-                </tr></thead><tbody></tbody>`;
-            let commentNo = 1;
-            Object.entries(group.commentUsers).forEach(([userKey, info]) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${commentNo++}</td><td>${info.displayName}</td><td>${info.screenName}</td>`;
-                commentTable.querySelector('tbody').appendChild(tr);
-            });
+            commentTable.innerHTML = renderTableHeader(commentTableId, [
+                { label: 'No.', width: '60px' },
+                { label: 'ユーザー名' },
+                { label: 'ユーザーID' }
+            ]);
+            let commentTbody = commentTable.querySelector('tbody');
+            renderUserRows(commentTbody, live.commentUsers);
             parent.appendChild(document.createElement('h3')).textContent = 'コメントしたユーザー一覧';
             parent.appendChild(commentTable);
 
@@ -149,7 +148,7 @@
                 data.forEach(e => {
                     const liveId = e.data.liveId || '不明なライブ';
                     if (!liveGroups[liveId]) {
-                        liveGroups[liveId] = { bitsUsers: {}, subUsers: new Map(), otherGiftUsers: {}, liveName: e.name || '' };
+                        liveGroups[liveId] = { bitsUsers: {}, subUsers: {}, otherGiftUsers: {}, liveName: e.name || '' };
                     }
                     const live = liveGroups[liveId];
                     const userKey = e.data.userId || '';
@@ -184,7 +183,7 @@
                                         month = monthMatch[1];
                                     }
                                 }
-                                live.subUsers.set(userKey, { displayName, screenName, tier, month });
+                                live.subUsers[userKey] = { displayName, screenName, tier, month };
                             }
                             // その他のギフト集計
                             else {
@@ -209,8 +208,8 @@
                 // HTMLに表示
                 const listsDiv = document.getElementById('lists');
                 listsDiv.innerHTML = '';
-                Object.entries(liveGroups).forEach(([liveId, group]) => {
-                    renderLiveTables(liveId, group, listsDiv);
+                Object.entries(liveGroups).forEach(([liveId, live]) => {
+                    renderLiveTables(liveId, live, listsDiv);
                 });
             } catch (err) {
                 console.error('API取得エラー', err);
