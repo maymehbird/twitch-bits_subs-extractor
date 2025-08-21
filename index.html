@@ -99,6 +99,25 @@
             parent.appendChild(document.createElement('h3')).textContent = 'その他のギフト';
             parent.appendChild(otherGiftTable);
 
+            // コメントしたユーザー一覧テーブル
+            const commentTableId = `comment-table-${liveId}`;
+            const commentTable = document.createElement('table');
+            commentTable.className = 'display';
+            commentTable.id = commentTableId;
+            commentTable.innerHTML = `<thead><tr>
+                <th style="width:60px;">No. ${getCopyIcon(commentTableId, 0)}</th>
+                <th>ユーザー名 ${getCopyIcon(commentTableId, 1)}</th>
+                <th>ユーザーID ${getCopyIcon(commentTableId, 2)}</th>
+                </tr></thead><tbody></tbody>`;
+            let commentNo = 1;
+            Object.entries(group.commentUsers).forEach(([userKey, info]) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${commentNo++}</td><td>${info.displayName}</td><td>${info.screenName}</td>`;
+                commentTable.querySelector('tbody').appendChild(tr);
+            });
+            parent.appendChild(document.createElement('h3')).textContent = 'コメントしたユーザー一覧';
+            parent.appendChild(commentTable);
+
             // DataTables初期化
             setTimeout(() => {
                 if ($(`#${bitsTableId}`).length) {
@@ -109,6 +128,9 @@
                 }
                 if ($(`#${otherGiftTableId}`).length) {
                     $(`#${otherGiftTableId}`).DataTable();
+                }
+                if ($(`#${commentTableId}`).length) {
+                    $(`#${commentTableId}`).DataTable();
                 }
             }, 0);
         }
@@ -130,10 +152,10 @@
                         liveGroups[liveId] = { bitsUsers: {}, subUsers: new Map(), otherGiftUsers: {}, liveName: e.name || '' };
                     }
                     const live = liveGroups[liveId];
+                    const userKey = e.data.userId || '';
+                    const displayName = e.data.displayName || '';
+                    const screenName = e.data.screenName || '';
                     if (e.data.hasGift === true) {
-                        const screenName = e.data.screenName || '';
-                        const displayName = e.data.displayName || '';
-                        const userKey = e.data.userId || '';
                         // ビッツ集計
                         if (e.data.price) {
                             const price = e.data.price || 0;
@@ -176,6 +198,11 @@
                                 live.otherGiftUsers[userKey].screenName = screenName;
                             }
                         }
+                    }
+                    // コメントしたユーザー集計
+                    if (!live.commentUsers) live.commentUsers = {};
+                    if (!live.commentUsers[userKey]) {
+                        live.commentUsers[userKey] = { displayName, screenName };
                     }
                 });
 
