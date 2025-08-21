@@ -46,12 +46,13 @@
             bitsTable.innerHTML = `<thead><tr>
             <th style="width:60px;">No. ${getCopyIcon(bitsTableId, 0)}</th>
             <th>ユーザー名 ${getCopyIcon(bitsTableId, 1)}</th>
-            <th>合計ビッツ ${getCopyIcon(bitsTableId, 2)}</th>
+            <th>ユーザーID ${getCopyIcon(bitsTableId, 2)}</th>
+            <th>合計ビッツ ${getCopyIcon(bitsTableId, 3)}</th>
         </tr></thead><tbody></tbody>`;
             let bitsNo = 1;
-            Object.entries(group.bitsUsers).forEach(([name, totalPrice]) => {
+            Object.entries(group.bitsUsers).forEach(([userKey, info]) => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${bitsNo++}</td><td>${name}</td><td>${totalPrice}</td>`;
+                tr.innerHTML = `<td>${bitsNo++}</td><td>${info.displayName}</td><td>${info.screenName}</td><td>${info.totalPrice}</td>`;
                 bitsTable.querySelector('tbody').appendChild(tr);
             });
             parent.appendChild(document.createElement('h3')).textContent = 'ビッツしたユーザー一覧';
@@ -65,13 +66,14 @@
             subTable.innerHTML = `<thead><tr>
             <th style="width:60px;">No. ${getCopyIcon(subTableId, 0)}</th>
             <th>ユーザー名 ${getCopyIcon(subTableId, 1)}</th>
-            <th>ティア ${getCopyIcon(subTableId, 2)}</th>
-            <th>サブスクライブ月 ${getCopyIcon(subTableId, 3)}</th>
+            <th>ユーザーID ${getCopyIcon(subTableId, 2)}</th>
+            <th>ティア ${getCopyIcon(subTableId, 3)}</th>
+            <th>サブスクライブ月 ${getCopyIcon(subTableId, 4)}</th>
         </tr></thead><tbody></tbody>`;
             let subNo = 1;
-            group.subUsers.forEach((subInfo, name) => {
+            group.subUsers.forEach((subInfo, userKey) => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${subNo++}</td><td>${name}</td><td>${subInfo.tier}</td><td>${subInfo.month}</td>`;
+                tr.innerHTML = `<td>${subNo++}</td><td>${subInfo.displayName}</td><td>${subInfo.screenName}</td><td>${subInfo.tier}</td><td>${subInfo.month}</td>`;
                 subTable.querySelector('tbody').appendChild(tr);
             });
             parent.appendChild(document.createElement('h3')).textContent = 'サブスクライブしたユーザー一覧';
@@ -85,12 +87,13 @@
             otherGiftTable.innerHTML = `<thead><tr>
                     <th style="width:60px;">No. ${getCopyIcon(otherGiftTableId, 0)}</th>
                     <th>ユーザー名 ${getCopyIcon(otherGiftTableId, 1)}</th>
-                    <th>コメント ${getCopyIcon(otherGiftTableId, 2)}</th>
+                    <th>ユーザーID ${getCopyIcon(otherGiftTableId, 2)}</th>
+                    <th>コメント ${getCopyIcon(otherGiftTableId, 3)}</th>
                 </tr></thead><tbody></tbody>`;
             let otherNo = 1;
-            Object.entries(group.otherGiftUsers).forEach(([name, comment]) => {
+            Object.entries(group.otherGiftUsers).forEach(([userKey, info]) => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${otherNo++}</td><td>${name}</td><td>${comment}</td>`;
+                tr.innerHTML = `<td>${otherNo++}</td><td>${info.displayName}</td><td>${info.screenName}</td><td>${info.comment}</td>`;
                 otherGiftTable.querySelector('tbody').appendChild(tr);
             });
             parent.appendChild(document.createElement('h3')).textContent = 'その他のギフト';
@@ -126,18 +129,21 @@
                     if (!liveGroups[liveId]) {
                         liveGroups[liveId] = { bitsUsers: {}, subUsers: new Map(), otherGiftUsers: {}, liveName: e.name || '' };
                     }
+                    const screenName = e.data.screenName || '';
+                    const displayName = e.data.displayName || '';
+                    const userKey = e.data.userId || '';
                     // ビッツ集計
                     if (e.data.hasGift === true && e.data.price) {
-                        const name = e.data.displayName;
                         const price = e.data.price || 0;
-                        if (!liveGroups[liveId].bitsUsers[name]) {
-                            liveGroups[liveId].bitsUsers[name] = 0;
+                        if (!liveGroups[liveId].bitsUsers[userKey]) {
+                            liveGroups[liveId].bitsUsers[userKey] = { displayName, screenName, totalPrice: 0 };
                         }
-                        liveGroups[liveId].bitsUsers[name] += price;
+                        liveGroups[liveId].bitsUsers[userKey].totalPrice += price;
+                        liveGroups[liveId].bitsUsers[userKey].displayName = displayName;
+                        liveGroups[liveId].bitsUsers[userKey].screenName = screenName;
                     }
                     // サブスク集計
                     if (e.data.hasGift === true && typeof e.data.price === "undefined" && e.data.comment && /subscribed at/i.test(e.data.comment)) {
-                        const name = e.data.displayName;
                         let month = '';
                         let tier = '';
                         if (e.data.comment) {
@@ -152,17 +158,18 @@
                                 month = monthMatch[1];
                             }
                         }
-                        liveGroups[liveId].subUsers.set(name, { tier, month });
+                        liveGroups[liveId].subUsers.set(userKey, { displayName, screenName, tier, month });
                     }
                     // その他のギフト集計
                     if (e.data.hasGift === true && typeof e.data.price === "undefined" && (!e.data.comment || !/subscribed at/i.test(e.data.comment))) {
-                        const name = e.data.displayName;
                         const comment = e.data.comment || '';
-                        if (!liveGroups[liveId].otherGiftUsers[name]) {
-                            liveGroups[liveId].otherGiftUsers[name] = comment;
+                        if (!liveGroups[liveId].otherGiftUsers[userKey]) {
+                            liveGroups[liveId].otherGiftUsers[userKey] = { displayName, screenName, comment };
                         } else {
-                            liveGroups[liveId].otherGiftUsers[name] += '<br>' + comment;
+                            liveGroups[liveId].otherGiftUsers[userKey].comment += '<br>' + comment;
                         }
+                        liveGroups[liveId].otherGiftUsers[userKey].displayName = displayName;
+                        liveGroups[liveId].otherGiftUsers[userKey].screenName = screenName;
                     }
                 });
 
