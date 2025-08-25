@@ -1,6 +1,6 @@
 <!--
     Twitch Bits/Subscribe Extractor from OneComme
-    Version 0.1.0
+    Version 0.1.1
     Copyright (c) 2025 by maymehbird
 -->
 <!DOCTYPE html>
@@ -16,7 +16,7 @@
 </head>
 
 <body>
-    <h1>Twitch Bits/Subscribe Extractor from OneComme V0.1.0</h1>
+    <h1>Twitch Bits/Subscribe Extractor from OneComme V0.1.1</h1>
     <div id="lists"></div>
     <script>
         // クリップボードに列をコピーする関数
@@ -40,7 +40,7 @@
         function renderUserRows(tbody, users, extraColumns = []) {
             let no = 1;
             Object.entries(users).forEach(([userKey, info]) => {
-                let row = `<td>${no++}</td><td>${info.nickname ?? info.displayName}</td><td>${info.displayName}</td><td>${info.screenName}</td>`;
+                let row = `<td>${no++}</td><td>${info.nickname ?? info.name}</td><td>${info.name}</td><td>${info.screenName}</td>`;
                 extraColumns.forEach(col => {
                     row += `<td>${info[col] ?? ''}</td>`;
                 });
@@ -174,9 +174,9 @@
                     }
                     const live = liveGroups[liveId];
                     const userKey = e.data.userId || '';
-                    const displayName = e.data.displayName || '';
+                    const name = e.data.name || '';
                     const screenName = e.data.screenName || '';
-                    let nickname = displayName;
+                    let nickname = name;
                     const userData = await fetchUserById(userKey);
                     if (userData && userData.nickname) {
                         nickname = userData.nickname;
@@ -186,10 +186,10 @@
                         if (e.data.price) {
                             const price = e.data.price || 0;
                             if (!live.bitsUsers[userKey]) {
-                                live.bitsUsers[userKey] = { displayName, screenName, nickname, totalPrice: 0 };
+                                live.bitsUsers[userKey] = { name, screenName, nickname, totalPrice: 0 };
                             }
                             live.bitsUsers[userKey].totalPrice += price;
-                            live.bitsUsers[userKey].displayName = displayName;
+                            live.bitsUsers[userKey].name = name;
                             live.bitsUsers[userKey].screenName = screenName;
                             live.bitsUsers[userKey].nickname = nickname;
                         }
@@ -211,17 +211,17 @@
                                         month = monthMatch[1];
                                     }
                                 }
-                                live.subUsers[userKey] = { displayName, screenName, nickname, tier, month };
+                                live.subUsers[userKey] = { name, screenName, nickname, tier, month };
                             }
                             // その他のギフト集計
                             else {
                                 const comment = e.data.comment || '';
                                 if (!live.otherGiftUsers[userKey]) {
-                                    live.otherGiftUsers[userKey] = { displayName, screenName, nickname, comment };
+                                    live.otherGiftUsers[userKey] = { name, screenName, nickname, comment };
                                 } else {
                                     live.otherGiftUsers[userKey].comment += '<br>' + comment;
                                 }
-                                live.otherGiftUsers[userKey].displayName = displayName;
+                                live.otherGiftUsers[userKey].name = name;
                                 live.otherGiftUsers[userKey].screenName = screenName;
                                 live.otherGiftUsers[userKey].nickname = nickname;
                             }
@@ -230,7 +230,7 @@
                     // コメントしたユーザー集計
                     if (!live.commentUsers) live.commentUsers = {};
                     if (!live.commentUsers[userKey]) {
-                        live.commentUsers[userKey] = { displayName, screenName, nickname };
+                        live.commentUsers[userKey] = { name, screenName, nickname };
                     } else {
                         live.commentUsers[userKey].nickname = nickname;
                     }
