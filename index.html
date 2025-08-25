@@ -40,7 +40,7 @@
         function renderUserRows(tbody, users, extraColumns = []) {
             let no = 1;
             Object.entries(users).forEach(([userKey, info]) => {
-                let row = `<td>${no++}</td><td>${info.displayName}</td><td>${info.screenName}</td>`;
+                let row = `<td>${no++}</td><td>${info.nickname ?? info.displayName}</td><td>${info.displayName}</td><td>${info.screenName}</td>`;
                 extraColumns.forEach(col => {
                     row += `<td>${info[col] ?? ''}</td>`;
                 });
@@ -68,6 +68,7 @@
             bitsTable.id = bitsTableId;
             bitsTable.innerHTML = renderTableHeader(bitsTableId, [
                 { label: 'No.', width: '60px' },
+                { label: 'ニックネーム' },
                 { label: 'ユーザー名' },
                 { label: 'ユーザーID' },
                 { label: '合計ビッツ' }
@@ -83,6 +84,7 @@
             subTable.id = subTableId;
             subTable.innerHTML = renderTableHeader(subTableId, [
                 { label: 'No.', width: '60px' },
+                { label: 'ニックネーム' },
                 { label: 'ユーザー名' },
                 { label: 'ユーザーID' },
                 { label: 'ティア' },
@@ -99,6 +101,7 @@
             otherGiftTable.id = otherGiftTableId;
             otherGiftTable.innerHTML = renderTableHeader(otherGiftTableId, [
                 { label: 'No.', width: '60px' },
+                { label: 'ニックネーム' },
                 { label: 'ユーザー名' },
                 { label: 'ユーザーID' },
                 { label: 'コメント' }
@@ -114,6 +117,7 @@
             commentTable.id = commentTableId;
             commentTable.innerHTML = renderTableHeader(commentTableId, [
                 { label: 'No.', width: '60px' },
+                { label: 'ニックネーム' },
                 { label: 'ユーザー名' },
                 { label: 'ユーザーID' }
             ]);
@@ -139,6 +143,19 @@
             }, 0);
         }
 
+        // 指定idからユーザーデータを取得する関数
+        async function fetchUserById(id) {
+            const url = `http://localhost:11180/api/users/${id}`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('ユーザー取得失敗');
+                return await response.json();
+            } catch (err) {
+                console.error('ユーザー取得エラー', err);
+                return null;
+            }
+        }
+
         // わんコメAPIからデータを取得して表示する関数
         async function fetchWankomeData() {
             // わんコメHTTP APIのエンドポイント
@@ -150,7 +167,7 @@
 
                 // liveIdごとにデータをグループ化
                 const liveGroups = {};
-                data.forEach(e => {
+                for (const e of data) {
                     const liveId = e.data.liveId || '不明なライブ';
                     if (!liveGroups[liveId]) {
                         liveGroups[liveId] = { bitsUsers: {}, subUsers: {}, otherGiftUsers: {}, liveName: e.name || '' };
@@ -159,16 +176,22 @@
                     const userKey = e.data.userId || '';
                     const displayName = e.data.displayName || '';
                     const screenName = e.data.screenName || '';
+                    let nickname = displayName;
+                    const userData = await fetchUserById(userKey);
+                    if (userData && userData.nickname) {
+                        nickname = userData.nickname;
+                    }
                     if (e.data.hasGift === true) {
                         // ビッツ集計
                         if (e.data.price) {
                             const price = e.data.price || 0;
                             if (!live.bitsUsers[userKey]) {
-                                live.bitsUsers[userKey] = { displayName, screenName, totalPrice: 0 };
+                                live.bitsUsers[userKey] = { displayName, screenName, nickname, totalPrice: 0 };
                             }
                             live.bitsUsers[userKey].totalPrice += price;
                             live.bitsUsers[userKey].displayName = displayName;
                             live.bitsUsers[userKey].screenName = screenName;
+                            live.bitsUsers[userKey].nickname = nickname;
                         }
                         // price未定義の場合
                         else if (typeof e.data.price === "undefined") {
@@ -188,27 +211,30 @@
                                         month = monthMatch[1];
                                     }
                                 }
-                                live.subUsers[userKey] = { displayName, screenName, tier, month };
+                                live.subUsers[userKey] = { displayName, screenName, nickname, tier, month };
                             }
                             // その他のギフト集計
                             else {
                                 const comment = e.data.comment || '';
                                 if (!live.otherGiftUsers[userKey]) {
-                                    live.otherGiftUsers[userKey] = { displayName, screenName, comment };
+                                    live.otherGiftUsers[userKey] = { displayName, screenName, nickname, comment };
                                 } else {
                                     live.otherGiftUsers[userKey].comment += '<br>' + comment;
                                 }
                                 live.otherGiftUsers[userKey].displayName = displayName;
                                 live.otherGiftUsers[userKey].screenName = screenName;
+                                live.otherGiftUsers[userKey].nickname = nickname;
                             }
                         }
                     }
                     // コメントしたユーザー集計
                     if (!live.commentUsers) live.commentUsers = {};
                     if (!live.commentUsers[userKey]) {
-                        live.commentUsers[userKey] = { displayName, screenName };
+                        live.commentUsers[userKey] = { displayName, screenName, nickname };
+                    } else {
+                        live.commentUsers[userKey].nickname = nickname;
                     }
-                });
+                }
 
                 // HTMLに表示
                 const listsDiv = document.getElementById('lists');
