@@ -1,6 +1,6 @@
 <!--
     Twitch Bits/Subscribe Extractor from OneComme
-    Version 0.1.1
+    Version 0.1.2
     Copyright (c) 2025 by maymehbird
 -->
 <!DOCTYPE html>
@@ -40,7 +40,7 @@
         function renderUserRows(tbody, users, extraColumns = []) {
             let no = 1;
             Object.entries(users).forEach(([userKey, info]) => {
-                let row = `<td>${no++}</td><td>${info.nickname ?? info.name}</td><td>${info.name}</td><td>${info.screenName}</td>`;
+                let row = `<td>${no++}</td><td>${info.nickname}</td><td>${info.name}</td><td>${info.screenName}</td>`;
                 extraColumns.forEach(col => {
                     row += `<td>${info[col] ?? ''}</td>`;
                 });
@@ -167,6 +167,7 @@
 
                 // liveIdごとにデータをグループ化
                 const liveGroups = {};
+                const nicknameCache = {};
                 for (const e of data) {
                     const liveId = e.data.liveId || '不明なライブ';
                     if (!liveGroups[liveId]) {
@@ -174,13 +175,25 @@
                     }
                     const live = liveGroups[liveId];
                     const userKey = e.data.userId || '';
-                    const name = e.data.name || '';
-                    const screenName = e.data.screenName || '';
-                    let nickname = name;
-                    const userData = await fetchUserById(userKey);
-                    if (userData && userData.nickname) {
-                        nickname = userData.nickname;
+                    const name = e.data.name || ''; // ユーザー名
+                    const screenName = e.data.screenName || ''; // ユーザーID
+                    let nickname = e.data.nickname || name; // ニックネーム（なければユーザー名）
+
+                    // users APIを使用してニックネームを取得する。users APIを使うのは一回だけにする
+                    // このif-else文を消した場合、最後のコメントを取得した時に設定していたニックネームを使用する
+                    if (nicknameCache[userKey]) {
+                        nickname = nicknameCache[userKey];
+                    } else {
+                        const userData = await fetchUserById(userKey);
+                        if (userData && userData.nickname) {
+                            nickname = userData.nickname;
+                        }
+                        else {
+                            nickname = name; // ニックネームがない場合はユーザー名を使用
+                        }
+                        nicknameCache[userKey] = nickname;
                     }
+
                     if (e.data.hasGift === true) {
                         // ビッツ集計
                         if (e.data.price) {
@@ -189,9 +202,9 @@
                                 live.bitsUsers[userKey] = { name, screenName, nickname, totalPrice: 0 };
                             }
                             live.bitsUsers[userKey].totalPrice += price;
-                            live.bitsUsers[userKey].name = name;
-                            live.bitsUsers[userKey].screenName = screenName;
-                            live.bitsUsers[userKey].nickname = nickname;
+                            if (name) live.bitsUsers[userKey].name = name;
+                            if (screenName) live.bitsUsers[userKey].screenName = screenName;
+                            if (nickname) live.bitsUsers[userKey].nickname = nickname;
                         }
                         // price未定義の場合
                         else if (typeof e.data.price === "undefined") {
@@ -221,9 +234,9 @@
                                 } else {
                                     live.otherGiftUsers[userKey].comment += '<br>' + comment;
                                 }
-                                live.otherGiftUsers[userKey].name = name;
-                                live.otherGiftUsers[userKey].screenName = screenName;
-                                live.otherGiftUsers[userKey].nickname = nickname;
+                                if (name) live.otherGiftUsers[userKey].name = name;
+                                if (screenName) live.otherGiftUsers[userKey].screenName = screenName;
+                                if (nickname) live.otherGiftUsers[userKey].nickname = nickname;
                             }
                         }
                     }
@@ -232,7 +245,9 @@
                     if (!live.commentUsers[userKey]) {
                         live.commentUsers[userKey] = { name, screenName, nickname };
                     } else {
-                        live.commentUsers[userKey].nickname = nickname;
+                        if (name) live.commentUsers[userKey].name = name;
+                        if (screenName) live.commentUsers[userKey].screenName = screenName;
+                        if (nickname) live.commentUsers[userKey].nickname = nickname;
                     }
                 }
 
