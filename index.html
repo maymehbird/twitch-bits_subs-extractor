@@ -1,6 +1,6 @@
 <!--
     Twitch Bits/Subscribe Extractor from OneComme
-    Version 0.1.2
+    Version 0.1.3
     Copyright (c) 2025 by maymehbird
 -->
 <!DOCTYPE html>
@@ -16,7 +16,7 @@
 </head>
 
 <body>
-    <h1>Twitch Bits/Subscribe Extractor from OneComme V0.1.2</h1>
+    <h1>Twitch Bits/Subscribe Extractor from OneComme V0.1.3</h1>
     <div id="lists"></div>
     <div id="loading-message" style="display:none;justify-content:center;align-items:center;gap:8px;font-weight:bold;margin:8px 0;height:32px;display:flex;text-align:center;">
         <span>読み込み中...</span>
@@ -81,6 +81,7 @@
             // ライブ名のみ表示
             const h2 = document.createElement('h2');
             h2.textContent = live.liveName || '';
+            //h2.textContent = live.liveName + '(' + liveId + ')' || '';
             parent.appendChild(h2);
 
             const bitsTableId = `bits-table-${liveId}`;
@@ -177,6 +178,21 @@
             }
         }
 
+        // コメントデータ取得関数
+        async function fetchComments() {
+            const apiUrl = 'http://localhost:11180/api/comments';
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error('コメントデータの取得に失敗しました');
+            return await response.json();
+        }
+
+        // ローカルcomments.json取得関数
+        async function fetchLocalComments() {
+            const response = await fetch('sec_data/comments.json');
+            if (!response.ok) throw new Error('ローカルコメントデータの取得に失敗しました');
+            return await response.json();
+        }
+
         // わんコメAPIからデータを取得して表示する関数
         async function fetchWankomeData() {
             // 読み込み中表示
@@ -188,12 +204,9 @@
             progressBar.style.display = 'block';
             progressBarInner.style.width = '0';
 
-            // わんコメHTTP APIのエンドポイント
-            const apiUrl = 'http://localhost:11180/api/comments';
             try {
-                const response = await fetch(apiUrl);
                 progressBarInner.style.width = '50%';
-                const data = await response.json();
+                const data = await fetchComments();
                 progressBarInner.style.width = '80%';
                 console.log('API取得成功', data);
 
@@ -201,7 +214,18 @@
                 const liveGroups = {};
                 const nicknameCache = {};
                 for (const e of data) {
-                    const liveId = e.data.liveId || '不明なライブ';
+                    // [TODO] liveIdが正常に取得できない場合があるので応急処置としてliveIdからコメ集計を分けるのをやめて、枠名からコメ集計するように変更
+                    // const liveId = e.data.liveId || 0; 
+                    // liveIdをe.nameのSHA-256ハッシュ値にする
+                    let liveId = '0';
+                    if (e.name) {
+                        // SHA-256ハッシュ関数
+                        const encoder = new TextEncoder();
+                        const dataBuf = encoder.encode(e.name);
+                        const hashBuf = await crypto.subtle.digest('SHA-256', dataBuf);
+                        liveId = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+                    }
+                    // End TODO
                     if (!liveGroups[liveId]) {
                         liveGroups[liveId] = { bitsUsers: {}, subUsers: {}, otherGiftUsers: {}, liveName: e.name || '' };
                     }
