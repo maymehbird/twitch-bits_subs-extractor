@@ -1,5 +1,7 @@
 # Twitch Bits/Subscribe Extractor from OneComme
 
+> **移行のお知らせ:** このリポジトリの後継は [`maymehbird/thank-you-card-onecomme-plugin`](https://github.com/maymehbird/thank-you-card-onecomme-plugin) です。今後の開発・更新は移行先をご確認ください。
+
 わんコメに表示したコメントから Twitch のビッツ、サブスク、その他のギフト（主にサブスクギフト）、コメントしてくれた人を一覧表示するアプリです。
 
 ## 使い方
